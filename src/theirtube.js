@@ -2,27 +2,28 @@ const puppeteer = require('puppeteer-extra');
 const fs = require('fs');
 const path = require('path');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker');
+
 const chalk = require('chalk');
 const BASE_URL = 'https://www.youtube.nl/';
 const dayjs = require('dayjs');
-const serverFolderPath = 'pointer-dev.kro-ncrv.nl/data/theirtube/'
+const serverFolderPath = 'pointer-dev.kro-ncrv.nl/data/theirtube'
 
 puppeteer.use(StealthPlugin());
+puppeteer.use(AdblockerPlugin());
+
+
+// Set variables
+let browser = null;
+let page = null;
 
 // TO DO: secure this in a better way
 const accounts = require('../secret/accounts.json');
-
-//this iteration_num decides how many numbers of videos to scrape
-//Use 8 to scrape all the top page results
-let iteration_num = 8;
-let browser = null;
-let page = null;
 
 const theirtube = {
 
     initialize: async () => {
         browser = await puppeteer.launch({
-            // userDataDir: COOKIE_PATH,
             headless: false,
             devtools: false,
             args: [
@@ -102,66 +103,63 @@ const theirtube = {
         //generating DD-MM-YY sequence name for the folder.
         let today = dayjs().format('DD-MM-YYYY-HH:mm');
 
-        //Set screenshot directory and make one if it does not exist
-        let screenshot_dir = path.join(__dirname, `../screenshots/${account.nickname}`);
-        if (!fs.existsSync(screenshot_dir)){
-            fs.mkdirSync(screenshot_dir);
-        }
-
-        //make a photo based on the iteraction count
-        let SCREENSHOT_PATH = path.join(__dirname, `../screenshots/${account.nickname}/${today}.jpg`);
-        await page.screenshot({path: SCREENSHOT_PATH});
-
         //$$ works exactly as a document.querySelectorAll() would in the browser console
         let videoArray = await page.$$('#content > .ytd-rich-item-renderer');
         let videos = [];
 
+        // A bit old-fashioned, but the modular structure $$ provides here is worth it;
+        let videoAmount = 8;
+        let currentParsed = 0;
+
         for (let videoElement of videoArray) {
+            currentParsed++;
+            if(currentParsed < videoAmount + 1) {
+                let video = {};
+                let youtube_url = "https://www.youtube.com";
 
-            let video = {};
-            let youtube_url = "https://www.youtube.com";
-
-            // This is a bit repetitive, but allows for better logging
-            try {
-                if (videoElement) {
-                    video.title = await videoElement.$eval('yt-formatted-string', element => element.innerText);
+                // This is a bit repetitive, but allows for better logging
+                try {
+                    if (videoElement) {
+                        video.title = await videoElement.$eval('yt-formatted-string', element => element.innerText);
+                    }
+                } catch (e) {
+                    console.log("Could not scrape video title" + e);
                 }
-            } catch (e) {
-                console.log("Could not scrape video title" + e);
-            }
 
-            try {
-                if (videoElement) {
-                    video.url = await videoElement.$eval('a', element => element.getAttribute('href'));
-                    video.url = youtube_url.concat(video.url);
+                try {
+                    if (videoElement) {
+                        video.url = await videoElement.$eval('a', element => element.getAttribute('href'));
+                        video.url = youtube_url.concat(video.url);
+                    }
+                } catch (e) {
+                    console.log("Could not scrape video url" + e);
                 }
-            } catch (e) {
-                console.log("Could not scrape video url" + e);
-            }
 
-            try {
-                if (videoElement) {
-                    video.channel = await videoElement.$eval('ytd-channel-name', element => element.innerText);
-                    video.channel_url = await videoElement.$eval('ytd-channel-name a', element => element.getAttribute('href'));
-                    video.channel_url = youtube_url.concat(video.channel_url);
-                    video.channel_icon = await videoElement.$eval('#avatar-link yt-img-shadow img', element => element.getAttribute('src'));
+                try {
+                    if (videoElement) {
+                        video.channel = await videoElement.$eval('ytd-channel-name', element => element.innerText);
+                        video.channel_url = await videoElement.$eval('ytd-channel-name a', element => element.href);
+                        video.channel_icon = await videoElement.$eval('#avatar-link yt-img-shadow img', element => element.src);
+                    }
+                } catch (e) {
+                    console.log("Could not scrape channel info, " + e);
                 }
-            } catch (e) {
-                console.log("Could not scrape channel info" + e);
-            }
 
-            try {
-                if (videoElement) {
-                    video.thumbnail = await videoElement.$eval('ytd-thumbnail yt-img-shadow img', element => element.getAttribute('src'));
-                    video.viewnum = await videoElement.$eval('#metadata-line span', element => element.innerText);
-                    video.date = await videoElement.$eval('#metadata-line', element => element.innerText);
-                    video.date = video.date.split("\n")[2];
+                try {
+                    if (videoElement) {
+                        video.thumbnail = await videoElement.$eval('ytd-thumbnail yt-img-shadow img', element => element.src);
+                        video.viewnum = await videoElement.$eval('#metadata-line span', element => element.innerText);
+                        video.date = await videoElement.$eval('#metadata-line', element => element.innerText);
+                        video.date = video.date.split("\n")[2];
+                    }
+                } catch (e) {
+                    console.log("Could not scrape video metadata" + e);
                 }
-            } catch (e) {
-                console.log("Could not scrape video metadata" + e);
-            }
 
-            videos.push(video);
+                if(video.title) {
+                    videos.push(video);
+                }
+            }
         }
 
         //Set json directory and make one (including empty json file) if it does not exist
@@ -197,9 +195,43 @@ const theirtube = {
                 console.error(err);
             } else {
                 console.log(chalk.black.bgYellowBright('💾 The file has been saved!' + '\n'));
-                browser.close();
             }
         });
+
+        //Set screenshot directory and make one if it does not exist
+        let screenshot_dir = path.join(__dirname, `../screenshots/${account.nickname}`);
+        if (!fs.existsSync(screenshot_dir)){
+            fs.mkdirSync(screenshot_dir);
+        }
+
+        //make a photo based on the iteraction count
+        let SCREENSHOT_PATH = path.join(__dirname, `../screenshots/${account.nickname}/${today}.jpg`);
+        await page.screenshot({path: SCREENSHOT_PATH});
+    },
+
+    goToPlaylist: async (playlistUrl) => {
+        await page.goto(playlistUrl);
+        await page.waitForSelector('.ytd-playlist-video-thumbnail-renderer');
+        await page.click('ytd-playlist-video-thumbnail-renderer');
+    },
+
+    playAndstayAwake: async () => {
+        await page.waitFor(2000);
+        await page.waitForSelector('.ytp-cued-thumbnail-overlay');
+        await page.click('.ytp-cued-thumbnail-overlay');
+
+        await page.setRequestInterception(true);
+
+        // page.on('request', request => {
+        //     if (request.isNavigationRequest()) {
+        //         console.log('NAV >>', request.method(), request.url())
+        //     } else {
+        //         console.log('NORMAL >>', request.method(), request.url())
+        //     }
+        // });
+
+        // await page.waitFor(300000);
+        console.log('End of playlist reached, ending script...');
     },
 
     end: async () => {

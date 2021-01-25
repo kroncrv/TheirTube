@@ -4,7 +4,8 @@
   "description": "Testing Scraping",
   "main": "index.js",
   "scripts": {
-    "scrape": "node src/index.js"
+    "scrape": "node src/scrape.js",
+    "playlist": "node src/playlist.js"
   },
   "author": "kihapper",
   "license": "ISC",
@@ -15,7 +16,8 @@
     "node-schedule": "^1.3.2",
     "puppeteer": "^2.1.1",
     "puppeteer-extra": "^3.1.9",
+    "puppeteer-extra-plugin-adblocker": "^2.11.10",
     "puppeteer-extra-plugin-stealth": "^2.4.9",
-    "yargs": "^15.3.1"
+    "yargs": "^16.2.0"
   }
 }

@@ -1,6 +1,4 @@
 const theirtube = require('./theirtube.js');
-const argv = require('yargs').argv;
-const chalk = require('chalk');
 
 // TO DO: secure this better
 // Get accounts
@@ -15,8 +13,6 @@ function scrapeAll() {
         accounts.accounts.forEach(async (account, index) => {
             await theirtube.initialize();
             await theirtube.login(account);
-            // console.log("scraping from :" + persona[0]);
-            // await theirtube.switchAccount(persona);
             await theirtube.scrape(account);
             await theirtube.end();
         });
