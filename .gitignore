@@ -1,5 +1,6 @@
 # Don't track content of these folders
 node_modules/
+secret/
 
 # Don't track files with these names
 .DS_Store
