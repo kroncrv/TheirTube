@@ -22,9 +22,33 @@ const accounts = require('../secret/accounts.json');
 
 const theirtube = {
 
+    backup: async (account) => {
+        if(account && account.nickname) {
+            console.log('Backing up json for ', account.nickname);
+
+            //Set json backup directory and make one if it does not exist
+            let json_dir = path.join(__dirname, `../json/${account.nickname}`);
+            let json_backup_dir = path.join(__dirname, `../json/${account.nickname}/backups`);
+            if (!fs.existsSync(json_backup_dir)) {
+                fs.mkdirSync(json_backup_dir);
+            }
+
+            // Then backup file
+            let today = dayjs().format('DD-MM-YYYY-HH:mm');
+            fs.copyFile(`${json_dir}/videos.json`, `${json_backup_dir}/videos-${today}.json`, (err) => {
+                if (err) throw err;
+                console.log(`Backup for ${account.nickname} was successful!`);
+            });
+
+        } else {
+            console.log('No account name to backup, are you sure your account info is correct?');
+        }
+
+    },
+
     initialize: async () => {
         browser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             devtools: false,
             args: [
                 '--no-sandbox',
@@ -36,7 +60,7 @@ const theirtube = {
         page = await browser.newPage();
 
         await page.setViewport({
-            width: 1200,
+            width: 2000,
             height: 1000,
         });
 
@@ -112,7 +136,6 @@ const theirtube = {
         let currentParsed = 0;
 
         for (let videoElement of videoArray) {
-            currentParsed++;
             if(currentParsed < videoAmount + 1) {
                 let video = {};
                 let youtube_url = "https://www.youtube.com";
@@ -156,7 +179,8 @@ const theirtube = {
                     console.log("Could not scrape video metadata" + e);
                 }
 
-                if(video.title) {
+                if(video.title && video.channel) {
+                    currentParsed++;
                     videos.push(video);
                 }
             }
