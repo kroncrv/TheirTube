@@ -13,9 +13,9 @@ async function scrapeAll() {
         await accounts.accounts.reduce(async (memo, account) => {
             await memo;
             await theirtube.backup(account);
-            await theirtube.initialize();
+            await theirtube.initialize(true);
             await theirtube.login(account);
-            await theirtube.scrape(account);
+            await theirtube.scrape(account, true);
             await theirtube.end();
         }, undefined);
     }

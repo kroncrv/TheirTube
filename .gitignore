@@ -2,6 +2,9 @@
 node_modules/
 secret/
 .env
+json
+screenshots
 
 # Don't track files with these names
 .DS_Store
+.idea

@@ -3,8 +3,9 @@ const yargs = require('yargs/yargs')
 const {hideBin} = require('yargs/helpers')
 const argv = yargs(hideBin(process.argv)).argv;
 
-// TO DO: secure this better
 // Get accounts
+// N.B. This file does (of course) not exist in the repo, create your own :)
+// See README for formatting requirements
 const accounts = require('../secret/accounts.json');
 
 if (argv.name && argv.playlist) {
@@ -25,11 +26,10 @@ if (argv.name && argv.playlist) {
 async function watch(account, playlist) {
     // Check if have both an account and playlist url
     if (account && playlist) {
-        await theirtube.initialize();
+        await theirtube.initialize(true);
         await theirtube.goToPlaylist(playlist);
         await theirtube.login(account);
         await theirtube.playAndstayAwake();
-        await theirtube.end();
     } else {
         console.log('No proper account name or playlist given, account', account, 'playlist', playlist);
     }

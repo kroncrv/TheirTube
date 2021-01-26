@@ -12,13 +12,9 @@ const serverFolderPath = 'pointer-dev.kro-ncrv.nl/data/theirtube'
 puppeteer.use(StealthPlugin());
 puppeteer.use(AdblockerPlugin());
 
-
 // Set variables
 let browser = null;
 let page = null;
-
-// TO DO: secure this in a better way
-const accounts = require('../secret/accounts.json');
 
 const theirtube = {
 
@@ -37,18 +33,20 @@ const theirtube = {
             let today = dayjs().format('DD-MM-YYYY-HH:mm');
             fs.copyFile(`${json_dir}/videos.json`, `${json_backup_dir}/videos-${today}.json`, (err) => {
                 if (err) throw err;
-                console.log(`Backup for ${account.nickname} was successful!`);
+                console.log(`💾 Backup for ${account.nickname} was successful!`);
             });
 
         } else {
-            console.log('No account name to backup, are you sure your account info is correct?');
+            console.log('❌ No account name to backup, are you sure your account info is correct?');
         }
 
     },
 
-    initialize: async () => {
+    initialize: async (headless = true) => {
+        console.log('Initializing browser, headless', headless);
+
         browser = await puppeteer.launch({
-            headless: true,
+            headless: headless,
             devtools: false,
             args: [
                 '--no-sandbox',
@@ -65,7 +63,9 @@ const theirtube = {
         });
 
         console.log(await browser.userAgent());
+
         await page.goto(BASE_URL);
+
         console.log(chalk.black.bgCyanBright(' Initialized, Going to —>" + BASE_URL'));
     },
 
@@ -80,12 +80,12 @@ const theirtube = {
             if (await page.$('yt-upsell-dialog-renderer paper-button.style-suggestive') !== null) {
                 console.log('Has inlog dialog, going through with inlog dialog selector');
                 await page.waitFor('yt-upsell-dialog-renderer paper-button.style-suggestive');
-                console.log("Click sign-in button");
+                console.log("🖱 Click sign-in button");
                 await page.click('yt-upsell-dialog-renderer paper-button.style-suggestive');
             } else {
                 console.log('No login dialog, use top right inlog button');
                 await page.waitFor('ytd-masthead paper-button.style-suggestive');
-                console.log("Click sign-in button");
+                console.log("🖱 Click sign-in button");
                 await page.click('ytd-masthead paper-button.style-suggestive');
             }
 
@@ -93,16 +93,16 @@ const theirtube = {
             await page.waitFor(500);
             await page.waitForSelector('#identifierId');
             await page.type('#identifierId', account.username, {delay: 70});
-            console.log('Typing in the users name...');
+            console.log('⌨️ Typing in the users name...');
 
             //Clicking the Next button
             await page.waitFor(500);
             await page.waitForSelector('#identifierNext');
             await page.click('#identifierNext');
-            console.log('Clicking the Next button...');
+            console.log('🖱 Clicking the Next button...');
 
             //Type in the password, wait 2 seconds since form take while to load
-            console.log('Typing in the password...');
+            console.log('⌨️ Typing in the password...');
             await page.waitFor(2500);
             await page.waitForSelector('#password');
             await page.type('#password', account.pass, {delay: 80});
@@ -111,14 +111,14 @@ const theirtube = {
             await page.waitFor(500);
             await page.waitForSelector('#passwordNext');
             await page.click('#passwordNext');
-            console.log('🖱 :Clicking the Send password button...');
+            console.log('🖱 Clicking the Send password button...');
 
         } else {
-            console.log('Could not sign in, are you sure your account info (for this account) is complete?');
+            console.log('❌ Could not sign in, are you sure your account info (for this account) is complete?');
         }
     },
 
-    scrape: async (account) => {
+    scrape: async (account, watchFirst = true) => {
         // Await the content
         await page.waitFor("#content");
         console.log("🔨 Scraper Starting for : " + account.nickname + " ——— waiting 5 seconds " + '\n');
@@ -155,7 +155,7 @@ const theirtube = {
                         video.url = youtube_url.concat(video.url);
                     }
                 } catch (e) {
-                    console.log("Could not scrape video url" + e);
+                    console.log(`❌ Could not scrape video url of video ${video.title}: ${e}`);
                 }
 
                 try {
@@ -165,7 +165,7 @@ const theirtube = {
                         video.channel_icon = await videoElement.$eval('#avatar-link yt-img-shadow img', element => element.src);
                     }
                 } catch (e) {
-                    console.log("Could not scrape channel info, " + e);
+                    console.log(`❌ Could not scrape channel info of video ${video.title}: ${e}`);
                 }
 
                 try {
@@ -176,7 +176,7 @@ const theirtube = {
                         video.date = video.date.split("\n")[2];
                     }
                 } catch (e) {
-                    console.log("Could not scrape video metadata" + e);
+                    console.log(`❌ Could not scrape video metadata of video ${video.title}: ${e}`);
                 }
 
                 if(video.title && video.channel) {
@@ -198,8 +198,6 @@ const theirtube = {
         const dataJson = dataBuffer.toString();
         const data = JSON.parse(dataJson);
 
-        // TO DO: back up old data
-
         // check if data is valid array and push new data to it
         if(data && data.length > -1) {
             let newData = {
@@ -218,7 +216,7 @@ const theirtube = {
             if (err) {
                 console.error(err);
             } else {
-                console.log(chalk.black.bgYellowBright('💾 The file has been saved!' + '\n'));
+                console.log(chalk.black.bgYellowBright('💾: The file has been saved!' + '\n'));
             }
         });
 
@@ -228,9 +226,15 @@ const theirtube = {
             fs.mkdirSync(screenshot_dir);
         }
 
-        //make a photo based on the iteraction count
+        // Take a screenshot
         let SCREENSHOT_PATH = path.join(__dirname, `../screenshots/${account.nickname}/${today}.jpg`);
         await page.screenshot({path: SCREENSHOT_PATH});
+
+        // And play first video if watchFirst is on (which it is by default
+        if(watchFirst) {
+            await theirtube.playFirstVideo(account);
+        }
+
     },
 
     goToPlaylist: async (playlistUrl) => {
@@ -240,25 +244,76 @@ const theirtube = {
     },
 
     playAndstayAwake: async () => {
-        await page.waitFor(2000);
-        await page.waitForSelector('.ytp-cued-thumbnail-overlay');
-        await page.click('.ytp-cued-thumbnail-overlay');
+        // Oof this is ugly, but hey we have no choice since YT autoplay after a playlist is so harsh
+        await page.waitFor(3000);
 
-        await page.setRequestInterception(true);
+        let checkElement = await setInterval(async () => {
+            // First evaluate the page
+            let s = await page.evaluate(() => {
+                // Search for the autoplay curtain and return the existence and visibility of the thing
+                const el = document.querySelector('.ytp-upnext');
+                let style;
+                if(el) style = window.getComputedStyle(el);
+                return {
+                    onPage: !!(el),
+                    visible: (style && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0')
+                }
+            });
 
-        // page.on('request', request => {
-        //     if (request.isNavigationRequest()) {
-        //         console.log('NAV >>', request.method(), request.url())
-        //     } else {
-        //         console.log('NORMAL >>', request.method(), request.url())
-        //     }
-        // });
+            // Keep this function, can be useful for debugging!
+            // console.log(`On page? ${s.onPage}, visible ${s.visible}`);
 
-        // await page.waitFor(300000);
-        console.log('End of playlist reached, ending script...');
+            if(s.visible) {
+                // If the curtain is visible, that means that the playlist is visible and autoplay will be engaged.
+                // We don't want that, so we'll clear the interval and end the script.
+                console.log('🚪 End of playlist/video reached, closing down!');
+                await page.waitFor(200);
+                await page.click('.ytp-upnext-cancel-button');
+                clearInterval(checkElement);
+                await theirtube.end();
+            } else {
+                // Otherwise we log a simple timestamp, so we can monitor the script
+                console.log('📹: Still watching playlist/video at', dayjs().format('HH:mm:ss'), page.url());
+            }
+        }, 1000);
+    },
+
+    playFirstVideo: async (account) => {
+        // Set up variables
+        let latest;
+        let video;
+
+        // Grab video json
+        const json_dir = path.join(__dirname, `../json/${account.nickname}`);
+
+        if (fs.existsSync(json_dir)){
+            //Reading the JSON files and converting them into JSON format
+            const dataBuffer = fs.readFileSync(`${json_dir}/videos.json`);
+            const dataJson = dataBuffer.toString();
+            const data = JSON.parse(dataJson);
+
+            // Select latest scrape
+            if(data && data.length > -1) {
+                latest = data[data.length - 1];
+            }
+
+            if(latest && latest.videos && latest.videos.length > -1) {
+                video = latest.videos.find(v => v.url && v.channel);
+            }
+
+            if(video && video.url) {
+                console.log(`🍿: Going to watch ${video.url}. This will last +/- 30 seconds.`);
+                await page.goto(video.url);
+                await page.waitFor(31000);
+                await theirtube.end();
+            } else {
+                console.log('❌ Could not load the first video, please check if video data is correct!');
+            }
+        }
     },
 
     end: async () => {
+        console.log('🚪 Closing browser');
         await browser.close();
     }
 

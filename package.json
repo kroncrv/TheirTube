@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "scrape": "node src/scrape.js",
-    "playlist": "node src/playlist.js"
+    "playlist": "node src/playlist.js",
+    "video": "node src/video.js"
   },
   "author": "kihapper",
   "license": "ISC",
