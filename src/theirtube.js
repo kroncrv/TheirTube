@@ -22,8 +22,14 @@ const theirtube = {
         if(account && account.nickname) {
             console.log('Backing up json for ', account.nickname);
 
-            //Set json backup directory and make one if it does not exist
+            //Set json directory and make one (including empty json file) if it does not exist
             let json_dir = path.join(__dirname, `../json/${account.nickname}`);
+            if (!fs.existsSync(json_dir)){
+                fs.mkdirSync(json_dir);
+                fs.writeFileSync(`${json_dir}/videos.json`, JSON.stringify([]));
+            }
+
+            //Set json backup directory and make one if it does not exist
             let json_backup_dir = path.join(__dirname, `../json/${account.nickname}/backups`);
             if (!fs.existsSync(json_backup_dir)) {
                 fs.mkdirSync(json_backup_dir);
@@ -112,6 +118,14 @@ const theirtube = {
             await page.waitForSelector('#passwordNext');
             await page.click('#passwordNext');
             console.log('🖱 Clicking the Send password button...');
+
+            // Log html
+            // await page.waitFor(2000);
+            // let body = await page.evaluate(() => {
+            //     return document.querySelector('body').innerHTML;
+            // });
+            //
+            // console.log('body', body);
 
         } else {
             console.log('❌ Could not sign in, are you sure your account info (for this account) is complete?');

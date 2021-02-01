@@ -1,14 +1,15 @@
 {
-  "name": "version1",
+  "name": "kro-ncrv-theirtube",
   "version": "1.0.0",
-  "description": "Testing Scraping",
+  "description": "Integrated environment for KRO-NCRV",
   "main": "index.js",
   "scripts": {
     "scrape": "node src/scrape.js",
     "playlist": "node src/playlist.js",
-    "video": "node src/video.js"
+    "video": "node src/video.js",
+    "deploy-data": "rsync -arv ~/documents/dev/pointer/TheirTube/json joris@pointer-dev.tilaa.cloud:/var/www/html/data/theirtube && rsync -arv ~/documents/dev/pointer/TheirTube/screenshots joris@pointer-dev.tilaa.cloud:/var/www/html/data/theirtube"
   },
-  "author": "kihapper",
+  "author": "kihapper, jorisheijkant",
   "license": "ISC",
   "dependencies": {
     "chalk": "^3.0.0",
