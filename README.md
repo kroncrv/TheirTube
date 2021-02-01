@@ -14,18 +14,23 @@ Installation is easy, just ```npm install``` or ```yarn``` and it installs the d
 
 Accounts need to be created by hand in a ```secret``` folder in the root directory. Please create an ```accounts.json``` in that folder with the following structure:
 
+N.B.: Use the original playlist view url, not a url of (one of the videos).
+
+
 ```
 {
     "accounts": [
         {
             "username": "youruser@gmail.com",
             "nickname": "profile1",
-            "pass": "password1"
+            "pass": "password1",
+            "playlist": "https://www.youtube.com/playlist?list=safGfasaslijcae92s"
         },
         {
             "username": "youruser2@gmail.com",
             "nickname": "profile2",
-            "pass": "password2"
+            "pass": "password2",
+            "playlist": "https://www.youtube.com/playlist?list=sfoeqo872eil"
         }
     ]
 }
@@ -42,10 +47,10 @@ Run ```yarn scrape``` to run a basic scrape. A screenshot will be saved in the `
 
 You *can* run the scraper in non-headless mode, by setting the one parameter to false in ```await theirtube.initialize(true)```. The scraper automatically watches the first video as well. To disable this, set the second parameter to false in ```await theirtube.scrape(account, true)```.
 
-To feed your account a playlist, use the ```yarn playlist``` command. It takes to arguments, the nickname of your account and the url to your playlist, like so:
+To feed your account a playlist, use the ```yarn playlist``` command. It takes one argument, the nickname of your account, like so:
 
-```yarn playlist --name="account1" --playlist="https://www.youtube.com/playlist?list=PLteGGGFYdh9HKVJLW9uGxIcaagsmyOZs-"```
+```yarn playlist --name="account1" ```
 
-N.B.: Use the original playlist view url, not a url of (one of the videos). Let the command run as long as needed, it will automatically close at the end of the playlist. It will log an awful lot.
+N.B.: Let the command run as long as needed, it will automatically close at the end of the playlist. It will log an awful lot.
 
 
